@@ -1,2 +1,130 @@
+@1File Header Comments
 
-a@@@@skjvbaesuyFAKJBFliyg
+File: main.cpp (lines 1–4) / riders.h (lines 1–4)
+
+Guideline: Code Guidelines §2.1 (Comment Block)
+
+Reason: Adds author and purpose at the top of each file for maintainability.
+
+（2）– Header Guards
+
+File: riders.h (lines 6–7, 108)
+
+Guideline: §2.2 (Header Guards)
+
+Reason: Prevents multiple inclusion errors and ensures stable compilation.
+（3）– Constants & Magic Numbers
+
+File: main.cpp (lines 18–19)
+
+Guideline: §3.4 (Constants) / §3.5 (Avoid Magic Numbers)
+
+Reason: Improves readability and simplifies later updates.
+@2 I committed after every meaningful change with descriptive messages, for example:
+
+“Add Delivery_Rider classes (bicycle/moped)”
+
+“Implement FCFS queue dispatch logic”
+
+“Fix CRLF parsing issue on Windows input”
+
+“Add Catch2 unit tests for time and mileage”
+
+“Final cleanup and Doxygen documentation update”
+
+These small, frequent commits made progress traceable and rollback safe.
+@3（1） – Function Documentation Block
+
+File: main.cpp (lines 127–135) — process_order()
+
+Structure:
+
+@brief → short summary of purpose
+
+@param → parameter description
+（2）– With Return Value
+
+File: riders.cpp (lines 35–45) — can_take_order()
+
+@return → explains meaning of Boolean return (true = rider can take order).
+@4 File: Makefile (lines 15–22)
+
+main.o: main.cpp riders.h → g++ -c main.cpp
+
+riders.o: riders.cpp riders.h → g++ -c riders.cpp
+
+tests.o: tests.cpp → g++ -c tests.cpp
+The -c flag compiles each source file into an object file (.o) without linking.
+
+Linking stage (lines 7–12):
+
+main: main.o riders.o → links into executable.
+Purpose: Faster rebuilds and modular compilation.
+@5 Structure: DailyStats in main.cpp (lines 32–40) holds:
+
+total_deliveries, total_money, missed_orders, plus per-vehicle stats.
+
+Computation: In process_order() (main.cpp lines 137–185)
+
+Updates totals when a rider is assigned: lines 168–177
+
+Adds to missed_orders if no rider available: lines 182–184
+
+Uses constants COST_STANDARD and COST_PRIORITY (lines 18–19).
+
+Formula: total_orders = total_deliveries + missed_orders
+
+Output: Written to .dat files by write_daily_summary() (lines 91–106).
+
+@6 Test 1 – Rider Initialization
+
+File: tests.cpp (lines 10–20)
+
+Purpose: Verify get_name() and get_vehicle_type() return correct values.
+
+Method: REQUIRE() assertions.
+
+Test 2 – Moped Logic and Time Calculation
+
+File: tests.cpp (lines 22–42)
+
+Purpose: Test priority acceptance, long-distance orders, and calculate_time() precision.
+
+Method: Multiple SECTIONs using REQUIRE and Approx.
+
+Test 3 – Bicycle Rules and Mileage Limit
+
+File: tests.cpp (lines 44–77)
+
+Purpose: Ensure bicycles reject priority or >2-mile orders and enforce daily quota.
+
+Method: Simulate accumulated distance, then assert next order validity.
+@7 (A) Command-line Argument Validation
+
+File: main.cpp (lines 191–195)
+
+Purpose: Ensure user provides exactly one input file; otherwise print usage.
+
+(B) Input File Opening Check
+
+File: main.cpp (lines 212–213)
+
+Purpose: Prevent null file pointer or read failure.
+
+(C) Order Format Validation
+
+File: main.cpp (lines 142–143)
+
+Purpose: Skip malformed lines where parts.size() != 3.
+
+(D) Business Rule Validation (can_take_order)
+
+File: riders.cpp (lines 46–59)
+
+Purpose: Enforce order rules—bicycles cannot take priority or >2.0 miles, check mileage quota.
+
+(E) Input Normalisation (Cross-platform)
+
+File: main.cpp (line 220)
+
+Purpose: Remove trailing \r from Windows files to ensure consistent parsing.
