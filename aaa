@@ -1,3 +1,12 @@
+1. 项目概述 (Project Overview)
+Deliver Eats 是一个用于模拟食品配送服务的系统。该系统处理包含订单请求的输入文件，根据配送员（骑手）的类型（机车或自行车）及其当前状态（排队中或配送中）动态分配任务。
+系统最终按天生成财务汇总报告，记录营业额、完成单数及漏单情况。
+Deliver Eats is a system that simulates a food delivery service. 
+It processes input files containing order requests and dynamically assigns jobs based on each rider’s 
+vehicle type (moped or bicycle) and current status (waiting in the queue or out on delivery). 
+The system then generates a daily financial summary report, recording total takings, the number of completed deliveries, and any missed orders.
+
+
 本项目用 C++11/14 + STL 开发：vector 管理骑手列表，deque 实现先来先服务队列，stream 读写并解析订单；用 OOP（继承/多态） 区分自行车和摩托车的规则。
 The project is implemented in C++ using the STL: vector stores the rider list, deque implements an FCFS waiting queue, and stream utilities handle order file parsing and output; 
 OOP (inheritance/polymorphism) is used to model different vehicle rules (bicycle vs moped).
@@ -15,3 +24,87 @@ The system uses a std::deque to enforce fair FCFS dispatching (returned riders a
 and relies on polymorphic can_take_order checks to apply vehicle-specific rules: bicycles cannot take priority orders, 
 are limited to 2.0 miles one-way and a daily mileage quota, while mopeds can take all orders with no mileage limit.
 
+4.2 财务结算自动化 报表生成：将日期字符串中的 / 等非数字字符过滤，生成规范输出文件名（如 12012026.dat），并自动写入每日汇总结果。 
+分类统计：在派单过程中实时累计自行车/机车的单量与营收，支持分车型对比分析。 
+4.3 质量保障（Testing） 单元测试（Catch2）：对骑手初始化、配送时间计算、以及里程上限/溢出等边界场景进行测试覆盖，以提升逻辑正确性与回归可靠性。 帮我生成英文
+4.2 Automated Financial Reporting
+
+Report generation: The system removes non-numeric characters (e.g., /) from the date string to produce a valid, standardised output filename (e.g., 12012026.dat), and automatically writes the daily summary results to this file.
+
+Categorised statistics: During dispatch, the program continuously accumulates the number of deliveries and total revenue for bicycle and moped riders separately, enabling vehicle-type comparison and analysis.
+
+4.3 Quality Assurance (Testing)
+
+Unit testing (Catch2): Catch2 is used to cover key scenarios such as rider initialisation, delivery time calculation, and edge cases involving daily mileage limits/overflows, 
+improving correctness and supporting reliable regression testing.
+
+
+1）跨平台换行符干扰（Windows \r\n）
+
+问题： Windows 下生成的输入文件包含 \r\n，在 Linux/VM 读取时行尾残留 \r，导致日期/订单解析异常。
+
+解决方案： 在 main 的读取循环中加入兼容处理：
+if (line.back() == '\r') line.pop_back();
+通过删除行尾 \r 统一文本格式。
+1) Cross-platform line ending issues (Windows \r\n)
+
+Problem: Input files created on Windows contain \r\n, and when read on Linux/VM a trailing \r may remain, causing parsing errors for date/order lines.
+
+Solution: Add a compatibility fix in the main reading loop:
+if (line.back() == '\r') line.pop_back();
+to remove the trailing carriage return and normalise the line format.
+
+2) 自行车派单/队列顺序冲突（限额导致无法接单）
+
+问题： 当自行车因规则限制（如里程限额/优先单限制）无法接单时，如果错误地将其重新排队，会破坏 FCFS 的公平队列顺序。
+
+解决方案： 在分配循环中使用迭代器遍历队列，仅对被选中的骑手执行 erase；不符合条件的骑手直接跳过（不移动位置），从而保持原队列顺序与公平性。
+2) Queue order conflict for bicycles when an order is not eligible
+
+Problem: When a bicycle rider cannot take an order due to constraints (e.g., mileage quota or priority restrictions), 
+incorrectly re-queuing/moving them would break FCFS fairness and change the original queue order.
+
+Solution: Iterate through the waiting queue using an iterator and only erase the selected rider; 
+if a rider is not eligible, simply skip them without changing their position, preserving the original FCFS order.
+
+3) 内存泄漏风险（频繁使用 new）
+
+问题： 骑手对象使用 new 在堆上创建，如果程序结束时未释放会造成内存泄漏；同时多态删除若无虚析构也存在风险。
+
+解决方案： 程序退出前遍历 all_riders 统一 delete 释放内存，并在基类中定义虚析构函数以保证通过基类指针删除派生类对象时安全正确。
+3) Memory leak risk due to heap allocation (new)
+
+Problem: Riders are created on the heap using new; failing to release them leads to memory leaks, 
+and deleting derived objects through a base pointer is unsafe without a virtual destructor.
+
+Solution: Before program termination, iterate through all_riders and delete each pointer, 
+and ensure the base class defines a virtual destructor so polymorphic deletion works correctly.
+
+4) 时间计算精度问题（小数分钟转整数分钟误差）
+
+问题： calculate_time 计算得到的配送耗时为 double（小数分钟），直接截断会导致返回时间偏差，从而影响骑手归队时刻。
+
+解决方案： 使用 <cmath> 中的 std::round 对耗时四舍五入，再转换为整数分钟，确保返回时间计算更准确稳定。
+4) Time calculation precision (converting fractional minutes to integers)
+
+Problem: Delivery duration is computed as a double (fractional minutes); 
+truncation can introduce errors and shift the rider’s computed return time, affecting availability updates.
+
+Solution: Use std::round from <cmath> to round to the nearest minute before converting to an integer, ensuring more accurate return-time calculations.
+
+5) 个人能力与学习成本（作业之外的困难）
+
+问题： 前期对 C++、OOP、STL 容器/迭代器、单元测试框架等不熟悉，导致实现与调试效率较低。
+
+解决方案： 通过观看教学视频、查阅官方文档，并参考 GitHub 上相关项目的实现思路与结构（仅学习，不复制代码）来逐步提升能力，最终完成需求与测试覆盖。
+5) Personal learning challenges (beyond the coursework requirements)
+
+Problem: Limited familiarity with C++, OOP, STL containers/iterators, 
+and unit testing initially reduced development and debugging efficiency.
+
+Solution: Improve proficiency by following tutorials, reading official documentation, 
+and studying implementation ideas/structure from GitHub projects (learning the approach only, 
+without copying code), then applying this knowledge to complete the solution and tests.
+
+1.类图 (Class Diagram):
+o Delivery_Rider 为基类，Moped_Rider 和 Bicycle_Rider 为子类。
